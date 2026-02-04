@@ -1,0 +1,13 @@
+{
+  "identifier": "qrcode-window",
+  "description": "二维码独立窗口权限（关闭自身、获取扫码地址、读取主题与背景设置）",
+  "windows": ["qrcode"],
+  "permissions": [
+    "core:default",
+    "core:event:default",
+    "core:window:default",
+    "core:window:allow-close",
+    "core:app:default",
+    "store:default"
+  ]
+}

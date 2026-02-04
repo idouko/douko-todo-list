@@ -1,0 +1,5 @@
+# 主窗背景透明度刷新：微移再还原以触发 DWM 重新合成
+[[permission]]
+identifier = "allow-refresh-main-window-transparency"
+description = "Enables the refresh_main_window_transparency command to fix transparent background on startup."
+commands.allow = ["refresh_main_window_transparency"]

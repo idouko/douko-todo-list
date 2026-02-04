@@ -1,0 +1,24 @@
+{
+  "identifier": "default",
+  "description": "主窗口权限",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "core:event:default",
+    "core:window:default",
+    "core:window:allow-create",
+    "core:window:allow-close",
+    "core:window:allow-minimize",
+    "core:window:allow-toggle-maximize",
+    "core:window:allow-set-always-on-top",
+    "core:window:allow-is-always-on-top",
+    "core:window:allow-start-dragging",
+    "core:app:default",
+    "store:default",
+    "notification:default",
+    "allow-open-qrcode-window",
+    "allow-open-settings-window",
+    "allow-refresh-main-window-transparency",
+    "updater:default"
+  ]
+}

@@ -1,0 +1,5 @@
+# 将用户选择的背景图复制到应用数据目录
+[[permission]]
+identifier = "allow-save-background-image"
+description = "Enables save_background_image command to copy selected image to app data dir."
+commands.allow = ["save_background_image"]

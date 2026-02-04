@@ -1,0 +1,5 @@
+# 设置「数据与安全」：获取存储信息、在文件管理器中打开路径
+[[permission]]
+identifier = "allow-storage-info"
+description = "Enables get_storage_info and open_path_in_folder for settings data panel."
+commands.allow = ["get_storage_info", "open_path_in_folder"]

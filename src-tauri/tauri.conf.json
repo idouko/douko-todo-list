@@ -1,0 +1,77 @@
+{
+  "productName": "XY Todo List",
+  "version": "1.0.0",
+  "identifier": "com.xycoder.todo-list",
+  "mainBinaryName": "xy-todo-list",
+  "build": {
+    "beforeDevCommand": {
+      "script": "node scripts/dev-with-wait.mjs",
+      "wait": true
+    },
+    "beforeBuildCommand": "pnpm build",
+    "devUrl": "http://localhost:5173",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "security": {
+      "csp": null,
+      "assetProtocol": {
+        "enable": true,
+        "scope": [
+          "$HOME/**",
+          "$PICTURE/**",
+          "$DOWNLOAD/**",
+          "$DOCUMENT/**",
+          "$DESKTOP/**",
+          "$APPDATA/**",
+          "$LOCALDATA/**"
+        ]
+      }
+    },
+    "windows": [
+      {
+        "label": "main",
+        "title": "XY Todo List",
+        "width": 375,
+        "height": 600,
+        "minWidth": 375,
+        "minHeight": 650,
+        "resizable": true,
+        "fullscreen": false,
+        "center": true,
+        "decorations": false,
+        "transparent": true,
+        "visible": false
+      }
+    ]
+  },
+  "bundle": {
+    "active": true,
+    "createUpdaterArtifacts": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "windows": {
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": ""
+    },
+    "shortDescription": "轻量化桌面 Todo List，支持三端与扫码编辑",
+    "longDescription": "支持 Windows、macOS、Linux 三端的轻量化桌面 Todo List 应用，支持任务增删改查、系统提醒、移动端扫码编辑。",
+    "category": "Productivity"
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "REPLACE_WITH_PUBLIC_KEY",
+      "endpoints": [
+        "https://github.com/OWNER/REPO/releases/latest/download/latest.json"
+      ]
+    }
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "identifier": "settings-window",
+  "description": "设置独立窗口",
+  "windows": ["settings"],
+  "permissions": [
+    "core:default",
+    "core:event:default",
+    "core:window:default",
+    "core:window:allow-close",
+    "core:app:default",
+    "store:default",
+    "dialog:default",
+    "process:allow-restart",
+    "allow-save-background-image",
+    "allow-clear-background-image",
+    "allow-storage-info"
+  ]
+}

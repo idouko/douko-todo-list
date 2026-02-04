@@ -1,0 +1,5 @@
+# 清除应用数据目录中的背景图缓存
+[[permission]]
+identifier = "allow-clear-background-image"
+description = "Enables clear_background_image command to remove cached background image."
+commands.allow = ["clear_background_image"]

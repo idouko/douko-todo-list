@@ -1,0 +1,5 @@
+# 应用自定义命令：打开设置独立窗口
+[[permission]]
+identifier = "allow-open-settings-window"
+description = "Enables the open_settings_window command to open the settings in a separate native window."
+commands.allow = ["open_settings_window"]

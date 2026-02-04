@@ -1,0 +1,5 @@
+# 侧栏窗口调用：设置侧栏宽度（收起 80px，展开为测量值）
+[[permission]]
+identifier = "allow-set-sidebar-width"
+description = "Enables the set_sidebar_width command for the sidebar window."
+commands.allow = ["set_sidebar_width"]

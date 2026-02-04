@@ -1,0 +1,5 @@
+# 应用自定义命令：打开二维码独立窗口
+[[permission]]
+identifier = "allow-open-qrcode-window"
+description = "Enables the open_qrcode_window command to open the QR code in a separate native window."
+commands.allow = ["open_qrcode_window"]

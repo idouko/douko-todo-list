@@ -1,0 +1,12 @@
+{
+  "identifier": "sidebar-window",
+  "description": "侧栏独立窗口（分组列表），透明无边框，需事件通信与读取主题/背景设置",
+  "windows": ["sidebar"],
+  "permissions": [
+    "core:default",
+    "core:event:default",
+    "core:window:default",
+    "store:default",
+    "allow-set-sidebar-width"
+  ]
+}
