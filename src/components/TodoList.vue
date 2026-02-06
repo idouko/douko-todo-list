@@ -15,6 +15,7 @@
     <el-table
       ref="tableRef"
       v-loading="loading"
+      element-loading-background="var(--app-bg-color, rgba(0,0,0,0.04))"
       :data="pagedTodoList"
       stripe
       row-key="id"

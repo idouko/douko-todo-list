@@ -27,3 +27,6 @@ pnpm-debug.log*
 # Tauri
 src-tauri/WixTools/
 src-tauri/gen/
+
+# Key
+.tauri/

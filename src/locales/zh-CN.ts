@@ -170,7 +170,7 @@ export default {
     delete: "删除",
   },
   mobile: {
-    title: "XY Todo",
+    title: "Douko Todo",
     subtitle: "与电脑同一 WiFi · 数据实时同步",
     loading: "加载中…",
     pullRefresh: "下拉刷新",

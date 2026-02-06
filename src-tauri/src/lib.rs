@@ -367,7 +367,7 @@ fn backend_settings_url(app: &AppHandle) -> String {
 
 /// 侧栏窗口逻辑宽度：收起 80px，展开由前端传入。与主窗左边缘紧密贴合（主窗口 x = 侧栏右边缘）
 const SIDEBAR_WIDTH_COLLAPSED: u32 = 80;
-const SIDEBAR_WIDTH_EXPANDED_DEFAULT: u32 = 200;
+const SIDEBAR_WIDTH_EXPANDED_DEFAULT: u32 = 160;
 static SIDEBAR_WIDTH_CURRENT: AtomicU32 = AtomicU32::new(SIDEBAR_WIDTH_EXPANDED_DEFAULT);
 /// 分组窗体（副窗体）对主窗体的吸附位置：0 = 吸附在左侧，1 = 吸附在右侧。
 /// 所有副窗体位置由 sync_sidebar_to_main 根据此值 + 主窗位置/尺寸计算，实现“吸附位置”方案。
@@ -389,7 +389,7 @@ fn sidebar_on_right() -> bool {
 /// 前端调用：设置侧栏宽度（收起 80，展开为测量值），并立即同步位置与尺寸，保证与主窗无间隙
 #[tauri::command]
 fn set_sidebar_width(app: AppHandle, width: u32) -> Result<(), String> {
-    let w = width.clamp(SIDEBAR_WIDTH_COLLAPSED, 150);
+    let w = width.clamp(SIDEBAR_WIDTH_COLLAPSED, 160);
     SIDEBAR_WIDTH_CURRENT.store(w, Ordering::Relaxed);
     sync_sidebar_to_main(&app, true);
     Ok(())
@@ -523,6 +523,7 @@ fn create_sidebar_window(app: &AppHandle) -> Result<(), String> {
     let parsed = url::Url::parse(&url).map_err(|e| e.to_string())?;
     let webview_url = WebviewUrl::External(parsed);
 
+    let main_always_on_top = main_win.is_always_on_top().unwrap_or(false);
     let builder = WebviewWindowBuilder::new(app, "sidebar", webview_url)
         .title("")
         .inner_size(w, main_h_logical.max(100.0))
@@ -533,7 +534,7 @@ fn create_sidebar_window(app: &AppHandle) -> Result<(), String> {
         .shadow(false)
         .skip_taskbar(true)
         .visible(true)
-        .always_on_top(false)
+        .always_on_top(main_always_on_top)
         .focused(false);
     builder.build().map_err(|e| e.to_string())?;
 
@@ -560,11 +561,12 @@ fn now_millis() -> u64 {
 const SIDEBAR_SYNC_THROTTLE_MS: u64 = 80;
 
 /// 按“吸附位置”方案更新副窗体位置与尺寸；bring_to_front 为 true 时再执行 set_focus 保证层级，拖动时传 false 避免卡顿。
+/// 当分组窗在左侧且主窗左移导致分组窗贴屏左边界时，会约束主窗右移以保持吸附关系，避免主窗盖住分组窗。
 fn sync_sidebar_to_main(app: &AppHandle, bring_to_front: bool) {
     let Some(main_win) = app.get_webview_window("main") else { return };
     let Some(sidebar) = app.get_webview_window("sidebar") else { return };
     LAST_SIDEBAR_SYNC_MS.store(now_millis(), Ordering::Relaxed);
-    let Ok(main_pos) = main_win.outer_position() else { return };
+    let Ok(mut main_pos) = main_win.outer_position() else { return };
     let Ok(main_outer) = main_win.outer_size() else { return };
     if main_outer.height == 0 || main_outer.width == 0 {
         let _ = sidebar.show();
@@ -574,6 +576,13 @@ fn sync_sidebar_to_main(app: &AppHandle, bring_to_front: bool) {
     let sidebar_scale = sidebar.scale_factor().unwrap_or_else(|_| main_win.scale_factor().unwrap_or(1.0));
     let sidebar_width_physical = (w * sidebar_scale).round() as i32;
     let overlap_left = 16;
+    if !sidebar_on_right() {
+        // 分组窗在左侧：若主窗左移过度导致分组窗贴屏左边界，主窗会盖住分组窗。约束主窗 x >= sidebar_width，保持吸附。
+        if main_pos.x < sidebar_width_physical {
+            main_pos.x = sidebar_width_physical;
+            let _ = main_win.set_position(tauri::PhysicalPosition::new(main_pos.x, main_pos.y));
+        }
+    }
     let (sidebar_x_physical, width_physical) = if sidebar_on_right() {
         let x = main_pos.x + main_outer.width as i32;
         let w = (sidebar_width_physical + 4).max(0) as u32;
@@ -598,28 +607,22 @@ fn sync_sidebar_to_main(app: &AppHandle, bring_to_front: bool) {
     }
 }
 
-/// 主窗 Moved 时：延迟 16ms 再读主窗位置并同步；同时做置顶，避免主窗向左拖覆盖左侧分组窗后松手时分组窗被压在下面。
-const MOVE_SYNC_DEFER_MS: u64 = 16;
+/// 主窗 Moved 时：拖拽期间实时同步位置（节流 16ms，不置顶避免卡顿），松手后 150ms 再做置顶。
+const MOVE_SYNC_THROTTLE_MS: u64 = 16;
 
 fn sync_sidebar_on_moved(app: &AppHandle) {
+    let now = now_millis();
+    if now.saturating_sub(LAST_SIDEBAR_SYNC_MS.load(Ordering::Relaxed)) >= MOVE_SYNC_THROTTLE_MS {
+        sync_sidebar_to_main(app, false);
+    }
     let my_count = MOVE_DEBOUNCE.fetch_add(1, Ordering::SeqCst) + 1;
     let app2 = app.clone();
     std::thread::spawn(move || {
-        std::thread::sleep(std::time::Duration::from_millis(MOVE_SYNC_DEFER_MS));
+        std::thread::sleep(std::time::Duration::from_millis(150));
         let app3 = app2.clone();
         let _ = app2.run_on_main_thread(move || {
             if MOVE_DEBOUNCE.load(Ordering::SeqCst) == my_count {
                 sync_sidebar_to_main(&app3, true);
-            }
-        });
-    });
-    let app4 = app.clone();
-    std::thread::spawn(move || {
-        std::thread::sleep(std::time::Duration::from_millis(150));
-        let app5 = app4.clone();
-        let _ = app4.run_on_main_thread(move || {
-            if MOVE_DEBOUNCE.load(Ordering::SeqCst) == my_count {
-                sync_sidebar_to_main(&app5, true);
             }
         });
     });

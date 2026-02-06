@@ -170,7 +170,7 @@ export default {
     delete: "Delete",
   },
   mobile: {
-    title: "XY Todo",
+    title: "Douko Todo",
     subtitle: "Same WiFi as desktop · Real-time sync",
     loading: "Loading…",
     pullRefresh: "Pull to refresh",

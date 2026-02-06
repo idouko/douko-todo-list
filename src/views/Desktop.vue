@@ -537,9 +537,12 @@ async function toggleAlwaysOnTop() {
   if (!isTauri.value) return;
   try {
     const { getCurrentWindow } = await import("@tauri-apps/api/window");
+    const { WebviewWindow } = await import("@tauri-apps/api/webviewWindow");
     const win = getCurrentWindow();
     const next = !alwaysOnTop.value;
     await win.setAlwaysOnTop(next);
+    const sidebarWin = await WebviewWindow.getByLabel("sidebar");
+    if (sidebarWin) await sidebarWin.setAlwaysOnTop(next);
     alwaysOnTop.value = next;
   } catch (e) {
     console.error(e);
@@ -989,7 +992,11 @@ onMounted(async () => {
   if (isTauri.value) {
     try {
       const { getCurrentWindow } = await import("@tauri-apps/api/window");
-      alwaysOnTop.value = await getCurrentWindow().isAlwaysOnTop();
+      const { WebviewWindow } = await import("@tauri-apps/api/webviewWindow");
+      const win = getCurrentWindow();
+      alwaysOnTop.value = await win.isAlwaysOnTop();
+      const sidebarWin = await WebviewWindow.getByLabel("sidebar");
+      if (sidebarWin) await sidebarWin.setAlwaysOnTop(alwaysOnTop.value);
     } catch {
       // ignore
     }
@@ -1075,7 +1082,7 @@ onUnmounted(() => {
 }
 .sidebar {
   flex-shrink: 0;
-  width: 200px;
+  width: 160px;
   display: flex;
   flex-direction: column;
   background: transparent;
@@ -1154,13 +1161,13 @@ onUnmounted(() => {
     max-width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
     margin-left 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
-/* 非新增按钮：选中 最长150px，名称+10px+数量，抽屉展开动画；左边加粗，取消下边框 */
+/* 非新增按钮：选中 最长140px，名称+10px+数量，抽屉展开动画；左边加粗，取消下边框 */
 .sidebar-item:not(.sidebar-item-add).active {
   --sidebar-item-border-width: 1px;
   --sidebar-item-border-left-width: 5px;
   --sidebar-item-border-bottom-width: 0;
   width: auto;
-  max-width: 150px;
+  max-width: 140px;
 }
 .sidebar-item:not(.sidebar-item-add).active .sidebar-item-name {
   flex: 1;
