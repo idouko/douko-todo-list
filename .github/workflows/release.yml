@@ -35,16 +35,16 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
 
+      - name: install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
       - name: setup node
         uses: actions/setup-node@v4
         with:
           node-version: "lts/*"
           cache: "pnpm"
-
-      - name: install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9
 
       - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable
@@ -58,6 +58,9 @@ jobs:
 
       - name: install frontend dependencies
         run: pnpm install
+
+      - name: sync version to Cargo.toml
+        run: pnpm version:sync
 
       # TAURI_SIGNING_PRIVATE_KEY 必填：用于签名更新包并生成 latest.json，应用内更新才可用（见 DEPLOY.md）
       - name: build and release
