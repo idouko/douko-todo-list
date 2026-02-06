@@ -524,19 +524,23 @@ fn create_sidebar_window(app: &AppHandle) -> Result<(), String> {
     let webview_url = WebviewUrl::External(parsed);
 
     let main_always_on_top = main_win.is_always_on_top().unwrap_or(false);
-    let builder = WebviewWindowBuilder::new(app, "sidebar", webview_url)
-        .title("")
-        .inner_size(w, main_h_logical.max(100.0))
-        .position(sidebar_x, sidebar_y)
-        .resizable(false)
-        .decorations(false)
-        .transparent(true)
-        .shadow(false)
-        .skip_taskbar(true)
-        .visible(true)
-        .always_on_top(main_always_on_top)
-        .focused(false);
-    builder.build().map_err(|e| e.to_string())?;
+    let builder = {
+        let b = WebviewWindowBuilder::new(app, "sidebar", webview_url)
+            .title("")
+            .inner_size(w, main_h_logical.max(100.0))
+            .position(sidebar_x, sidebar_y)
+            .resizable(false)
+            .decorations(false);
+        #[cfg(not(target_os = "macos"))]
+        let b = b.transparent(true);
+        b
+    }
+    .shadow(false)
+    .skip_taskbar(true)
+    .visible(true)
+    .always_on_top(main_always_on_top)
+    .focused(false);
+    builder.build().map_err(|e: tauri::Error| e.to_string())?;
 
     if let Some(sidebar) = app.get_webview_window("sidebar") {
         let sidebar_scale = sidebar.scale_factor().unwrap_or(scale);
