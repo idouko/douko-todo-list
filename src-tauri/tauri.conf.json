@@ -68,7 +68,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDM3N0NCRUE2OUQ4MzhGODQKUldTRWo0T2RwcjU4TjM0aXh1ZVd4MmFnWXlFUFdCR3hUeTJ1SXJQUUhlalF1ZzBnbmZBNVNnSzcK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDE1MzJBQUNFQTMxNkJFRTAKUldUZ3ZoYWp6cW95RlNIY1IxRFErWlg3Yis2VjZTK0dZMUZiMnZSRUNYMXVzcW9WNXo1SG95TjUK",
       "endpoints": [
         "https://github.com/idouko/xy-todo-list/releases/latest/download/latest.json"
       ]
