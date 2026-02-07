@@ -11,7 +11,8 @@
     "icons:gen": "node src-tauri/scripts/gen-icon.cjs",
     "version:sync": "node scripts/sync-version.mjs",
     "version": "node scripts/sync-version.mjs",
-    "release": "node scripts/release.mjs"
+    "release": "node scripts/release.mjs",
+    "key:regenerate": "node scripts/regenerate-signing-key.mjs"
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.2",
