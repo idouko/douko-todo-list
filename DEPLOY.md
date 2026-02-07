@@ -112,8 +112,10 @@ git push
 满足其一即可触发打包：
 
 - **方式 A**：推送或合并到 `release` 分支。
-- **方式 B**：推送版本号 tag，例如 `v1.0.0`（`v*` 形式）。
+- **方式 B**：推送版本号 tag，**必须带 `v` 前缀**，例如 `v1.0.0`（不能是 `1.0.0`）。
 - **方式 C**：在 GitHub 仓库 **Actions** 页选择 **release** 工作流，点击 **Run workflow** 手动运行。
+
+**重要**：tag 必须匹配 `v*` 模式，且 tag 对应的提交中 `package.json` 的 version 应与 tag 一致（如 tag `v1.0.0` 对应 version `1.0.0`）。
 
 ### 3.2 会打包的平台
 
@@ -128,22 +130,29 @@ git push
 ### 3.3 版本号来源
 
 - Release 的版本号和 tag 名来自 **应用版本**，不是随便写的。
-- 应用版本在这里定义：
-  - **前端**：`package.json` 的 `version`
-  - **Tauri**：`src-tauri/tauri.conf.json` 的 `version` 和 `src-tauri/Cargo.toml` 的 `[package].version`
-- 建议三处保持一致，例如都设为 `1.0.0`。  
-  发布新版本时，同时改这三处再触发 workflow。
+- 应用版本以 `package.json` 的 `version` 为准；`tauri.conf.json` 和 `Cargo.toml` 会自动同步。
+- 发布新版本时，改 `package.json` 的 version，执行 `pnpm version:sync`，再触发 workflow。
 
 ### 3.4 发布一次新版本的推荐步骤
 
-1. **更新版本号**（三处一致）  
-   - `package.json` → `"version": "1.0.1"`
-   - `src-tauri/tauri.conf.json` → `"version": "1.0.1"`
-   - `src-tauri/Cargo.toml` → `version = "1.0.1"`
+**方式一：一键发布（推荐）**
+
+```bash
+pnpm release 1.0.1
+```
+
+该命令会：更新 `package.json` 与 `Cargo.toml` 版本、提交、删除旧 tag（若存在）、创建并推送 `v1.0.1`，触发 GitHub Actions 构建。参数支持 `1.0.1` 或 `v1.0.1`。  
+网络不稳定时可加 `--no-push`，仅做本地操作，恢复后手动执行 `git push origin main` 和 `git push origin v1.0.1`。
+
+**方式二：手动分步**
+
+1. **更新版本号**  
+   - 修改 `package.json` 的 `"version": "1.0.1"`
+   - 执行 `pnpm version:sync` 同步到 Cargo.toml（tauri.conf.json 已指向 package.json）
 
 2. **提交并推送**
    ```bash
-   git add package.json src-tauri/tauri.conf.json src-tauri/Cargo.toml
+   git add package.json src-tauri/Cargo.toml
    git commit -m "chore: bump version to 1.0.1"
    git push origin main
    ```
@@ -154,6 +163,7 @@ git push
      git tag v1.0.1
      git push origin v1.0.1
      ```
+     **注意**：tag 必须是 `v1.0.1` 这种带 `v` 的形式，`1.0.1` 不会触发 workflow。
    - 或：创建并推送 `release` 分支：  
      `git push origin main:release`
    - 或：在 Actions 里对 **release** workflow 点 **Run workflow**。
@@ -209,7 +219,7 @@ git push
 - [ ] 已用 `tauri signer generate` 生成密钥对，公钥已写入 `tauri.conf.json`，私钥已保存。
 - [ ] `tauri.conf.json` 中 `plugins.updater.endpoints` 的 URL 已改为你的 `https://github.com/用户名/仓库名/releases/latest/download/latest.json`。
 - [ ] 在 GitHub 仓库 Settings → Actions → Secrets 中已添加 `TAURI_SIGNING_PRIVATE_KEY`（私钥整段）。
-- [ ] `package.json`、`tauri.conf.json`、`Cargo.toml` 三处版本号一致。
+- [ ] `package.json` 版本已更新，且已执行 `pnpm version:sync` 同步 Cargo.toml。
 - [ ] 已用 tag 或 `release` 分支或手动 Run workflow 触发过一次 **release** 工作流，且四个平台 job 都成功。
 - [ ] 在 Releases 中发布了对应的 Draft，确认 Assets 中有各平台安装包和 `latest.json`。
 - [ ] 在已安装的旧版应用里，设置 → 关于我们 → 检查更新，能检测到新版本并完成「立即更新」和重启。
@@ -218,13 +228,20 @@ git push
 
 ## 六、常见问题
 
-**Q：推送 tag 或 release 分支后没有自动打包？**  
+**Q：推送 tag 后没有自动打包？**  
+- **Tag 格式**：必须带 `v` 前缀，如 `v1.0.0`。推送 `1.0.0` 不会触发（workflow 只匹配 `v*`）。
 - 到 **Actions** 页看是否有 **release** 工作流在跑或报错。
 - 确认 **Workflow permissions** 为 “Read and write permissions”（Settings → Actions → General）。
 
+**Q：GitHub 上只有 tag，但没有三平台安装包？**  
+- 到 **Actions** 页查看 **release** 工作流是否成功完成，四个 job 是否都绿。
+- 若有 job 失败，点进去看具体报错（常见：`TAURI_SIGNING_PRIVATE_KEY` 未配置）。
+- 若 workflow 根本没跑，检查 tag 是否为 `v1.0.0` 形式。
+
 **Q：Release 里没有 `latest.json` 或安装包？**  
-- 必须配置并填好 `TAURI_SIGNING_PRIVATE_KEY`，否则 Tauri 不会生成更新相关产物。
+- 必须配置并填好 `TAURI_SIGNING_PRIVATE_KEY`，否则 Tauri 不会生成更新相关产物，构建可能失败。
 - 确认 `src-tauri/tauri.conf.json` 里 `bundle.createUpdaterArtifacts` 为 `true`（当前已为 true）。
+- 构建成功后，需在 **Releases** 页将 Draft 点 **Publish release** 才会对外可见。
 
 **Q：应用内检查更新提示失败或一直最新？**  
 - 确认 endpoints 的 URL 与仓库名、用户名一致，且该 Release 已 **Publish**（不是 Draft）。
