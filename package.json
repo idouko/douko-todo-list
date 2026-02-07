@@ -1,6 +1,6 @@
 {
   "name": "xy-todo-list",
-  "version": "1.0.1",
+  "version": "1.0.0",
   "description": "支持 Windows、macOS、Linux 三端的轻量化桌面 Todo List 应用",
   "type": "module",
   "scripts": {
