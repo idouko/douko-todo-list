@@ -818,6 +818,12 @@ pub fn run() {
                         sync_sidebar_on_moved(window.app_handle());
                     }
                 }
+                tauri::WindowEvent::Focused(true) => {
+                    // 主窗获得焦点（如点击任务栏图标唤起）时，同时把分组窗 Bring to front
+                    if label == "main" {
+                        sync_sidebar_to_main(window.app_handle(), true);
+                    }
+                }
                 _ => {}
             }
         })
