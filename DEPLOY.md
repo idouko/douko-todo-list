@@ -96,10 +96,10 @@ git push
 1. 打开仓库 → **Settings** → **Secrets and variables** → **Actions**。
 2. 点击 **New repository secret**。
 3. **Name**：`TAURI_SIGNING_PRIVATE_KEY`
-4. **Value**：粘贴 2.1 步保存的 **Private** 整段（包含 `dcdc8d...` 那一整行）。
+4. **Value**：粘贴 2.1 步保存的 **Private** 整段（base64 字符串，无换行无空格）。
 5. 保存。
 
-这样 GitHub Actions 在打包时会用该私钥签名更新包，应用内更新时用公钥校验，保证安全。
+**无密码密钥**：若使用 `pnpm run key:regenerate` 生成的无密码密钥，务必**删除** `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`（若存在），否则构建会报错。
 
 ---
 
