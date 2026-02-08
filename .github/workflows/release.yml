@@ -74,7 +74,10 @@ jobs:
           if (!key) throw new Error('TAURI_SIGNING_PRIVATE_KEY_BASE64 secret not set');
           const keyPath = path.join('.tauri', 'ci-signing.key');
           fs.mkdirSync('.tauri', { recursive: true });
-          fs.writeFileSync(keyPath, Buffer.from(key, 'base64'));
+          const decoded = Buffer.from(key, 'base64');
+          fs.writeFileSync(keyPath, decoded);
+          if (decoded.length < 50) throw new Error('Decoded key too short');
+          console.log('Signing key prepared:', decoded.length, 'bytes');
           "
 
       # TAURI_SIGNING_PRIVATE_KEY 必填：用于签名更新包并生成 latest.json，应用内更新才可用（见 DEPLOY.md）
@@ -83,6 +86,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ github.workspace }}/.tauri/ci-signing.key
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
         with:
           tagName: app-v__VERSION__
           releaseName: XY Todo List v__VERSION__
