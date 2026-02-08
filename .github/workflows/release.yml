@@ -68,6 +68,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          # 无密码密钥需显式传空字符串，否则会报 Wrong password
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
         with:
           tagName: app-v__VERSION__
           releaseName: XY Todo List v__VERSION__
