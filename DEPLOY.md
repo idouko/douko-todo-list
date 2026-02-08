@@ -93,13 +93,17 @@ git push
 
 ### 2.3 在 GitHub 中配置私钥（用于 CI 签名）
 
+GitHub Secrets 对多行内容可能破坏换行，导致 "Wrong password" 错误。采用 **Base64 编码** 存储可避免此问题（参考 [moss 方案](https://github.com/Symbiosis-Lab/moss/commit/4c5fae71d62578a0cb00c374a08c92d9698e000f)）。
+
 1. 打开仓库 → **Settings** → **Secrets and variables** → **Actions**。
 2. 点击 **New repository secret**。
-3. **Name**：`TAURI_SIGNING_PRIVATE_KEY`
-4. **Value**：粘贴 2.1 步保存的 **Private** 整段（base64 字符串，无换行无空格）。
+3. **Name**：`TAURI_SIGNING_PRIVATE_KEY_BASE64`
+4. **Value**：将 `.tauri/xy-todo-list.key` 文件 base64 编码后的字符串。可用以下命令生成：
+   - **PowerShell**：`[Convert]::ToBase64String([IO.File]::ReadAllBytes('.tauri/xy-todo-list.key'))`
+   - **macOS/Linux**：`base64 -i .tauri/xy-todo-list.key | tr -d '\n'`
 5. 保存。
 
-**无密码密钥**：若使用 `pnpm run key:regenerate` 生成的无密码密钥，务必**删除** `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`（若存在），否则构建会报错。
+**注意**：使用 `TAURI_SIGNING_PRIVATE_KEY_BASE64` 替代原 `TAURI_SIGNING_PRIVATE_KEY`，可删除旧的 `TAURI_SIGNING_PRIVATE_KEY`。
 
 ---
 
@@ -218,7 +222,7 @@ pnpm release 1.0.1
 - [ ] GitHub 仓库已创建，代码已推送。
 - [ ] 已用 `tauri signer generate` 生成密钥对，公钥已写入 `tauri.conf.json`，私钥已保存。
 - [ ] `tauri.conf.json` 中 `plugins.updater.endpoints` 的 URL 已改为你的 `https://github.com/用户名/仓库名/releases/latest/download/latest.json`。
-- [ ] 在 GitHub 仓库 Settings → Actions → Secrets 中已添加 `TAURI_SIGNING_PRIVATE_KEY`（私钥整段）。
+- [ ] 在 GitHub 仓库 Settings → Actions → Secrets 中已添加 `TAURI_SIGNING_PRIVATE_KEY_BASE64`（base64 编码的私钥）。
 - [ ] `package.json` 版本已更新，且已执行 `pnpm version:sync` 同步 Cargo.toml。
 - [ ] 已用 tag 或 `release` 分支或手动 Run workflow 触发过一次 **release** 工作流，且四个平台 job 都成功。
 - [ ] 在 Releases 中发布了对应的 Draft，确认 Assets 中有各平台安装包和 `latest.json`。
@@ -235,13 +239,16 @@ pnpm release 1.0.1
 
 **Q：GitHub 上只有 tag，但没有三平台安装包？**  
 - 到 **Actions** 页查看 **release** 工作流是否成功完成，四个 job 是否都绿。
-- 若有 job 失败，点进去看具体报错（常见：`TAURI_SIGNING_PRIVATE_KEY` 未配置）。
+- 若有 job 失败，点进去看具体报错（常见：`TAURI_SIGNING_PRIVATE_KEY_BASE64` 未配置）。
 - 若 workflow 根本没跑，检查 tag 是否为 `v1.0.0` 形式。
 
 **Q：Release 里没有 `latest.json` 或安装包？**  
 - 必须配置并填好 `TAURI_SIGNING_PRIVATE_KEY`，否则 Tauri 不会生成更新相关产物，构建可能失败。
 - 确认 `src-tauri/tauri.conf.json` 里 `bundle.createUpdaterArtifacts` 为 `true`（当前已为 true）。
 - 构建成功后，需在 **Releases** 页将 Draft 点 **Publish release** 才会对外可见。
+
+**Q：CI 报错 "Wrong password for that key"？**  
+- 通常是 GitHub Secrets 对多行/特殊字符的破坏导致。改用 `TAURI_SIGNING_PRIVATE_KEY_BASE64`（base64 编码的私钥）可避免，见 2.3 节。
 
 **Q：应用内检查更新提示失败或一直最新？**  
 - 确认 endpoints 的 URL 与仓库名、用户名一致，且该 Release 已 **Publish**（不是 Draft）。
