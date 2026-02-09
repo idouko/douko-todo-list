@@ -81,12 +81,12 @@ jobs:
           "
 
       # TAURI_SIGNING_PRIVATE_KEY 必填：用于签名更新包并生成 latest.json，应用内更新才可用（见 DEPLOY.md）
+      # 注意：必须使用无密码密钥（--ci 生成），且不要设置 TAURI_SIGNING_PRIVATE_KEY_PASSWORD
       - name: build and release
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ github.workspace }}/.tauri/ci-signing.key
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
         with:
           tagName: app-v__VERSION__
           releaseName: XY Todo List v__VERSION__

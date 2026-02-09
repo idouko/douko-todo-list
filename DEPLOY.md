@@ -49,19 +49,22 @@ git push -u origin main
 
 ### 2.1 生成更新签名密钥对
 
-在项目根目录执行（需已安装 [Tauri CLI](https://v2.tauri.app/start/install/)）：
+**必须使用无密码密钥**（`--ci`），否则 CI 会报 "Wrong password for that key"。推荐使用项目内置脚本：
 
 ```bash
-pnpm tauri signer generate -w ~/.tauri/xy-todo-list.key
+pnpm run key:regenerate
 ```
 
-- 会生成 **私钥** 和 **公钥**。
-- 终端会输出类似：
-  - `Your keypair was generated successfully`
-  - `Private: ...`（一长串，仅出现一次，务必保存）
-  - `Public: dcdc8d...`（公钥）
+该命令会生成无密码密钥、更新 `tauri.conf.json` 中的公钥，并输出私钥内容供复制。
 
-**重要**：把 **Private** 整段复制保存到安全处，后面要放进 GitHub Secrets，且只显示一次。
+若需手动生成：
+
+```bash
+pnpm tauri signer generate -w .tauri/xy-todo-list.key -f --ci
+```
+
+- `--ci` 生成**无密码**密钥，CI 中无需 `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`。
+- 终端会输出公钥，需填入 `tauri.conf.json` 的 `plugins.updater.pubkey`。
 
 ### 2.2 在配置中填写公钥和更新地址
 
@@ -93,7 +96,9 @@ git push
 
 ### 2.3 在 GitHub 中配置私钥（用于 CI 签名）
 
-GitHub Secrets 对多行内容可能破坏换行，导致 "Wrong password" 错误。采用 **Base64 编码** 存储可避免此问题（参考 [moss 方案](https://github.com/Symbiosis-Lab/moss/commit/4c5fae71d62578a0cb00c374a08c92d9698e000f)）。
+**前提**：密钥必须是无密码的（由 `--ci` 或 `pnpm run key:regenerate` 生成）。若原先为有密码密钥，请先执行 `pnpm run key:regenerate` 重新生成并更新公钥。
+
+GitHub Secrets 对多行内容可能破坏换行，采用 **Base64 编码** 存储可避免此问题（参考 [moss 方案](https://github.com/Symbiosis-Lab/moss/commit/4c5fae71d62578a0cb00c374a08c92d9698e000f)）。
 
 1. 打开仓库 → **Settings** → **Secrets and variables** → **Actions**。
 2. 点击 **New repository secret**。
@@ -103,7 +108,9 @@ GitHub Secrets 对多行内容可能破坏换行，导致 "Wrong password" 错�
    - **macOS/Linux**：`base64 -i .tauri/xy-todo-list.key | tr -d '\n'`
 5. 保存。
 
-**注意**：使用 `TAURI_SIGNING_PRIVATE_KEY_BASE64` 替代原 `TAURI_SIGNING_PRIVATE_KEY`，可删除旧的 `TAURI_SIGNING_PRIVATE_KEY`。
+**注意**：
+- 使用 `TAURI_SIGNING_PRIVATE_KEY_BASE64` 替代原 `TAURI_SIGNING_PRIVATE_KEY`，可删除旧的 `TAURI_SIGNING_PRIVATE_KEY`。
+- **不要** 在 GitHub Secrets 中配置 `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`（无密码密钥不需要且会导致 CI 失败）。
 
 ---
 
