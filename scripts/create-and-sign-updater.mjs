@@ -6,7 +6,7 @@
  * target: 如 aarch64-apple-darwin、x86_64-unknown-linux-gnu、x86_64-pc-windows-msvc
  */
 import { execSync } from "child_process";
-import { existsSync, readdirSync, readFileSync, writeFileSync } from "fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 
@@ -26,6 +26,16 @@ if (!keyBase64) {
   console.error("TAURI_SIGNING_PRIVATE_KEY_BASE64 未设置");
   process.exit(1);
 }
+
+// 解码 base64 到临时文件，用 -f 传文件路径（避免 -k 命令行传参导致的格式问题）
+const tmpKeyPath = join(root, ".tauri", "ci-signing.key");
+mkdirSync(dirname(tmpKeyPath), { recursive: true });
+const decodedKey = Buffer.from(keyBase64.replace(/\s/g, ""), "base64");
+if (decodedKey.length < 50 || !decodedKey.toString("utf-8").includes("untrusted comment")) {
+  console.error("解码后的密钥格式无效，请确认 TAURI_SIGNING_PRIVATE_KEY_BASE64 是私钥文件的 base64 编码");
+  process.exit(1);
+}
+writeFileSync(tmpKeyPath, decodedKey);
 
 const bundleBase = join(targetDir, rustTarget, "release", "bundle");
 let updaterBundle = null;
@@ -114,11 +124,11 @@ if (!existsSync(updaterBundle)) {
 }
 
 console.log("使用 tauri signer sign 签名...");
-execSync(`pnpm tauri signer sign -k "${keyBase64}" -p "" "${updaterBundle}"`, {
+execSync(`pnpm tauri signer sign -f "${tmpKeyPath}" -p "" "${updaterBundle}"`, {
   cwd: root,
   stdio: "inherit",
-  env: { ...process.env, TAURI_SIGNING_PRIVATE_KEY_BASE64: keyBase64 },
 });
+unlinkSync(tmpKeyPath); // 签名后删除临时密钥文件
 
 const sigPath = `${updaterBundle}.sig`;
 if (!existsSync(sigPath)) {
