@@ -118,6 +118,8 @@ GitHub Secrets 对多行内容可能破坏换行，采用 **Base64 编码** 存�
 
 项目已包含工作流：`.github/workflows/release.yml`。
 
+**Moss 方案**：为避免 Tauri 在构建时读取私钥/密码的已知问题（[#13485](https://github.com/tauri-apps/tauri/issues/13485)），workflow 在构建阶段禁用 `createUpdaterArtifacts`，构建完成后用 `tauri signer sign -k "$BASE64" -p ""` 单独签名 updater 产物。详见 [moss 方案](https://github.com/Symbiosis-Lab/moss/commit/4c5fae71d62578a0cb00c374a08c92d9698e000f)。
+
 ### 3.1 触发方式
 
 满足其一即可触发打包：
