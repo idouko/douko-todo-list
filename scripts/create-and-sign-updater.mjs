@@ -27,7 +27,7 @@ if (!keyBase64) {
   process.exit(1);
 }
 
-// 解码 base64 到临时文件，用 -f 传文件路径（避免 -k 命令行传参导致的格式问题）
+// 写入密钥到临时文件。tauri signer -f 期望文件内容为 base64（与 .key 文件格式一致）
 const tmpKeyPath = join(root, ".tauri", "ci-signing.key");
 mkdirSync(dirname(tmpKeyPath), { recursive: true });
 const keyBase64Trimmed = keyBase64.replace(/\s/g, "");
@@ -35,22 +35,23 @@ const decodedKey = Buffer.from(keyBase64Trimmed, "base64");
 const decodedStr = decodedKey.toString("utf-8");
 const firstLine = decodedStr.split("\n")[0] || decodedStr.slice(0, 80);
 
-// 输出脱敏信息便于对比（不打印私钥本身）
+// 输出脱敏信息便于对比
 console.log("[签名] Base64 长度:", keyBase64Trimmed.length, "| 解码后字节:", decodedKey.length, "| 首行:", firstLine);
 
 if (decodedKey.length < 50) {
-  console.error("错误：解码后密钥过短（" + decodedKey.length + " 字节），请检查是否完整复制了 base64 字符串到 GitHub Secrets");
+  console.error("错误：解码后密钥过短，请检查是否完整复制了 base64 到 GitHub Secrets");
   process.exit(1);
 }
 if (decodedStr.includes("minisign public key")) {
-  console.error("错误：你填入了公钥，请使用私钥（.tauri/xy-todo-list.key）的 base64。运行 pnpm run key:regenerate 获取正确格式。");
+  console.error("错误：你填入了公钥，请使用私钥的 base64。运行 pnpm run key:regenerate 获取正确格式。");
   process.exit(1);
 }
 if (!decodedStr.includes("untrusted comment") || !decodedStr.includes("rsign")) {
-  console.error("错误：解码后的密钥格式无效。请执行 pnpm run key:regenerate，将输出的 Base64 完整复制到 GitHub Secrets → TAURI_SIGNING_PRIVATE_KEY_BASE64");
+  console.error("错误：解码后的密钥格式无效。请执行 pnpm run key:regenerate，将输出的 Base64 完整复制到 GitHub Secrets。");
   process.exit(1);
 }
-writeFileSync(tmpKeyPath, decodedKey);
+// tauri signer -f 期望 base64 格式（与 tauri signer generate 的 .key 输出一致），写入 base64 而非 decoded
+writeFileSync(tmpKeyPath, keyBase64Trimmed);
 
 const bundleBase = join(targetDir, rustTarget, "release", "bundle");
 let updaterBundle = null;
