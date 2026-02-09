@@ -30,8 +30,14 @@ if (!keyBase64) {
 // 解码 base64 到临时文件，用 -f 传文件路径（避免 -k 命令行传参导致的格式问题）
 const tmpKeyPath = join(root, ".tauri", "ci-signing.key");
 mkdirSync(dirname(tmpKeyPath), { recursive: true });
-const decodedKey = Buffer.from(keyBase64.replace(/\s/g, ""), "base64");
+const keyBase64Trimmed = keyBase64.replace(/\s/g, "");
+const decodedKey = Buffer.from(keyBase64Trimmed, "base64");
 const decodedStr = decodedKey.toString("utf-8");
+const firstLine = decodedStr.split("\n")[0] || decodedStr.slice(0, 80);
+
+// 输出脱敏信息便于对比（不打印私钥本身）
+console.log("[签名] Base64 长度:", keyBase64Trimmed.length, "| 解码后字节:", decodedKey.length, "| 首行:", firstLine);
+
 if (decodedKey.length < 50) {
   console.error("错误：解码后密钥过短（" + decodedKey.length + " 字节），请检查是否完整复制了 base64 字符串到 GitHub Secrets");
   process.exit(1);

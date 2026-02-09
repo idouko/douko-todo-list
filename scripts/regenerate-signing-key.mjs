@@ -9,7 +9,7 @@
  * 3. 删除 GitHub Secrets 中的 TAURI_SIGNING_PRIVATE_KEY_PASSWORD（若存在）
  */
 import { execSync } from "child_process";
-import { readFileSync, writeFileSync } from "fs";
+import { existsSync, readFileSync, unlinkSync, writeFileSync } from "fs";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 
@@ -19,13 +19,17 @@ const keyPath = join(root, ".tauri", "xy-todo-list.key");
 
 console.log("\n🔑 正在生成新的签名密钥对（无密码）...\n");
 
+// 先删除旧密钥，避免 tauri signer 在某些环境下不覆盖
+if (existsSync(keyPath)) unlinkSync(keyPath);
+if (existsSync(keyPath + ".pub")) unlinkSync(keyPath + ".pub");
+
 execSync(`pnpm tauri signer generate -w ${keyPath} -f --ci`, {
   cwd: root,
   stdio: "inherit",
 });
 
-// 读取私钥和公钥
-const privateKey = readFileSync(keyPath, "utf-8");
+// 读取私钥和公钥（tauri signer generate 生成的文件已是 base64 格式）
+const privateKeyContent = readFileSync(keyPath, "utf-8").trim();
 const publicKey = readFileSync(keyPath + ".pub", "utf-8").trim();
 
 // 更新 tauri.conf.json
@@ -35,10 +39,15 @@ tauriConf.plugins.updater.pubkey = publicKey;
 writeFileSync(tauriConfPath, JSON.stringify(tauriConf, null, 2) + "\n");
 
 console.log("\n✅ 密钥已生成，tauri.conf.json 已更新公钥。");
-const b64 = Buffer.from(privateKey, "utf-8").toString("base64");
+// 文件已是 base64，直接使用；若是 raw PEM 则再编码
+const b64 = /^[A-Za-z0-9+/=]+$/.test(privateKeyContent)
+  ? privateKeyContent
+  : Buffer.from(privateKeyContent, "utf-8").toString("base64");
 console.log("\n📋 请将以下 Base64 字符串（私钥）完整复制到 GitHub Secrets → TAURI_SIGNING_PRIVATE_KEY_BASE64：");
 console.log("   （注意：仅复制 Base64，不要复制横线 ─）");
 console.log("─".repeat(60));
 console.log(b64);
 console.log("─".repeat(60));
-console.log("\n⚠️ 不要配置 TAURI_SIGNING_PRIVATE_KEY_PASSWORD；若存在请删除。详见 DEPLOY.md。\n");
+console.log("\n⚠️ 不要配置 TAURI_SIGNING_PRIVATE_KEY_PASSWORD；若存在请删除。详见 DEPLOY.md。");
+console.log("\n验证 Secret 是否一致：CI 会输出 Base64 长度，可与本地对比：");
+console.log("   PowerShell: (Get-Content .tauri/xy-todo-list.key -Raw).Length");
