@@ -31,8 +31,17 @@ if (!keyBase64) {
 const tmpKeyPath = join(root, ".tauri", "ci-signing.key");
 mkdirSync(dirname(tmpKeyPath), { recursive: true });
 const decodedKey = Buffer.from(keyBase64.replace(/\s/g, ""), "base64");
-if (decodedKey.length < 50 || !decodedKey.toString("utf-8").includes("untrusted comment")) {
-  console.error("解码后的密钥格式无效，请确认 TAURI_SIGNING_PRIVATE_KEY_BASE64 是私钥文件的 base64 编码");
+const decodedStr = decodedKey.toString("utf-8");
+if (decodedKey.length < 50) {
+  console.error("错误：解码后密钥过短（" + decodedKey.length + " 字节），请检查是否完整复制了 base64 字符串到 GitHub Secrets");
+  process.exit(1);
+}
+if (decodedStr.includes("minisign public key")) {
+  console.error("错误：你填入了公钥，请使用私钥（.tauri/xy-todo-list.key）的 base64。运行 pnpm run key:regenerate 获取正确格式。");
+  process.exit(1);
+}
+if (!decodedStr.includes("untrusted comment") || !decodedStr.includes("rsign")) {
+  console.error("错误：解码后的密钥格式无效。请执行 pnpm run key:regenerate，将输出的 Base64 完整复制到 GitHub Secrets → TAURI_SIGNING_PRIVATE_KEY_BASE64");
   process.exit(1);
 }
 writeFileSync(tmpKeyPath, decodedKey);

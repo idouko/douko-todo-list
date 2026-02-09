@@ -35,8 +35,10 @@ tauriConf.plugins.updater.pubkey = publicKey;
 writeFileSync(tauriConfPath, JSON.stringify(tauriConf, null, 2) + "\n");
 
 console.log("\n✅ 密钥已生成，tauri.conf.json 已更新公钥。");
-console.log("\n📋 请将以下 Base64 字符串复制到 GitHub Secrets → TAURI_SIGNING_PRIVATE_KEY_BASE64：");
+const b64 = Buffer.from(privateKey, "utf-8").toString("base64");
+console.log("\n📋 请将以下 Base64 字符串（私钥）完整复制到 GitHub Secrets → TAURI_SIGNING_PRIVATE_KEY_BASE64：");
+console.log("   （注意：仅复制 Base64，不要复制横线 ─）");
 console.log("─".repeat(60));
-console.log(Buffer.from(privateKey, "utf-8").toString("base64"));
+console.log(b64);
 console.log("─".repeat(60));
 console.log("\n⚠️ 不要配置 TAURI_SIGNING_PRIVATE_KEY_PASSWORD；若存在请删除。详见 DEPLOY.md。\n");
