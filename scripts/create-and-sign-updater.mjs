@@ -5,7 +5,7 @@
  * platform: darwin-aarch64 | darwin-x86_64 | linux-x86_64 | windows-x86_64
  * target: 如 aarch64-apple-darwin、x86_64-unknown-linux-gnu、x86_64-pc-windows-msvc
  */
-import { execSync } from "child_process";
+import { execFileSync, execSync } from "child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
@@ -142,8 +142,9 @@ const tmpKeyPath = join(root, ".tauri", "ci-signing.key");
 mkdirSync(dirname(tmpKeyPath), { recursive: true });
 writeFileSync(tmpKeyPath, keyBase64Trimmed);
 try {
-  execSync(
-    ["pnpm", "tauri", "signer", "sign", "-f", tmpKeyPath, "-p", signingPassword, updaterBundle],
+  execFileSync(
+    "pnpm",
+    ["tauri", "signer", "sign", "-f", tmpKeyPath, "-p", signingPassword, updaterBundle],
     { cwd: root, stdio: "inherit", env: signEnv }
   );
 } finally {
