@@ -148,7 +148,7 @@ if (!signingPassword) {
   process.exit(1);
 }
 
-// 将 Base64 写入临时文件，用 -f 传路径；密码仅通过环境变量传递，避免 -p 空字符串在 CI 中被吃掉
+// 临时文件 + -f；密码用 -p 显式传入（tauri 在 CI 下常不读 env，会走“无密码”并尝试 TTY -> Device not configured）
 const tmpKeyPath = join(root, ".tauri", "ci-signing.key");
 mkdirSync(dirname(tmpKeyPath), { recursive: true });
 writeFileSync(tmpKeyPath, keyBase64Trimmed);
@@ -158,16 +158,13 @@ const tauriBin = join(
   ".bin",
   process.platform === "win32" ? "tauri.CMD" : "tauri"
 );
+const signArgs = ["signer", "sign", "-f", tmpKeyPath, "-p", signingPassword, updaterBundle];
 try {
-  execFileSync(
-    tauriBin,
-    ["signer", "sign", "-f", tmpKeyPath, updaterBundle],
-    {
-      cwd: root,
-      stdio: "inherit",
-      env: { ...process.env, TAURI_SIGNING_PRIVATE_KEY_PASSWORD: signingPassword },
-    }
-  );
+  execFileSync(tauriBin, signArgs, {
+    cwd: root,
+    stdio: "inherit",
+    env: { ...process.env, TAURI_SIGNING_PRIVATE_KEY_PASSWORD: signingPassword },
+  });
 } finally {
   if (existsSync(tmpKeyPath)) {
     unlinkSync(tmpKeyPath);
