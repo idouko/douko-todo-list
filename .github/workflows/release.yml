@@ -97,11 +97,14 @@ jobs:
         run: |
           node scripts/create-and-sign-updater.mjs ${{ matrix.platform_key }} ${{ matrix.rust_target }}
 
+      - name: collect release artifacts
+        run: node scripts/collect-release-artifacts.mjs ${{ matrix.platform_key }} ${{ matrix.rust_target }}
+
       - name: upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: build-${{ matrix.platform_key }}
-          path: ${{ matrix.bundle_path }}/
+          path: release-artifacts/
 
   release:
     needs: build
@@ -131,11 +134,14 @@ jobs:
         id: version
         run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
 
+      - name: create source archive
+        run: git archive -o release-assets/source.zip HEAD
+
       - name: create release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: app-v${{ steps.version.outputs.version }}
-          name: XY Todo List v${{ steps.version.outputs.version }}
+          name: Douko Todo v${{ steps.version.outputs.version }}
           body: |
             ## 更新内容
             请查看 [CHANGELOG](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md)。
