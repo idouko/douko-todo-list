@@ -135,8 +135,8 @@ if (!existsSync(updaterBundle)) {
 }
 
 console.log("使用 tauri signer sign 签名...");
-// 使用 -k 直接传 base64，不传 -p（无密码密钥）
-execSync(`pnpm tauri signer sign -k "${keyBase64Trimmed}" "${updaterBundle}"`, {
+// -k 传 base64，-p "" 显式空密码，避免 CI 无 TTY 时尝试读终端 (os error 6)
+execSync(`pnpm tauri signer sign -k "${keyBase64Trimmed}" -p "" "${updaterBundle}"`, {
   cwd: root,
   stdio: "inherit",
 });
