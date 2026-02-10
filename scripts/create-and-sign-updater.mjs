@@ -135,19 +135,29 @@ if (!existsSync(updaterBundle)) {
 }
 
 console.log("使用 tauri signer sign 签名...");
-// 无密码密钥用环境变量；有密码时用 -p，避免 pnpm 传参时把空字符串丢掉导致密码错位
+// 用环境变量传私钥内容 + 空密码，避免 -f 临时文件或 -p 触发 TTY（CI 下 "Device not configured"）
 const signingPassword = process.env.TAURI_SIGNING_PRIVATE_KEY_PASSWORD ?? "";
-const signEnv = { ...process.env, TAURI_SIGNING_PRIVATE_KEY_PASSWORD: signingPassword };
-const tmpKeyPath = join(root, ".tauri", "ci-signing.key");
-mkdirSync(dirname(tmpKeyPath), { recursive: true });
-writeFileSync(tmpKeyPath, keyBase64Trimmed);
-const signArgs = ["tauri", "signer", "sign", "-f", tmpKeyPath];
-if (signingPassword.length > 0) signArgs.push("-p", signingPassword);
-signArgs.push(updaterBundle);
+const signEnv = {
+  ...process.env,
+  TAURI_SIGNING_PRIVATE_KEY: decodedStr,
+  TAURI_SIGNING_PRIVATE_KEY_PASSWORD: signingPassword,
+};
+const tauriBin = join(root, "node_modules", ".bin", process.platform === "win32" ? "tauri.CMD" : "tauri");
+const signArgs = ["signer", "sign", updaterBundle];
+if (signingPassword.length > 0) signArgs.splice(1, 0, "-p", signingPassword);
 try {
-  execFileSync("pnpm", signArgs, { cwd: root, stdio: "inherit", env: signEnv });
-} finally {
-  unlinkSync(tmpKeyPath);
+  execFileSync(tauriBin, signArgs, { cwd: root, stdio: "inherit", env: signEnv });
+} catch (_) {
+  // 若 env 传 key 不被支持或失败，回退：写临时文件 + -f，并显式 -p 避免 TTY
+  mkdirSync(join(root, ".tauri"), { recursive: true });
+  const tmpKeyPath = join(root, ".tauri", "ci-signing.key");
+  writeFileSync(tmpKeyPath, keyBase64Trimmed);
+  try {
+    const fallbackArgs = ["signer", "sign", "-f", tmpKeyPath, "-p", signingPassword, updaterBundle];
+    execFileSync(tauriBin, fallbackArgs, { cwd: root, stdio: "inherit", env: signEnv });
+  } finally {
+    unlinkSync(tmpKeyPath);
+  }
 }
 
 const sigPath = `${updaterBundle}.sig`;
