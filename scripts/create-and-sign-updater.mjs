@@ -5,13 +5,10 @@
  * platform: darwin-aarch64 | darwin-x86_64 | linux-x86_64 | windows-x86_64
  * target: 如 aarch64-apple-darwin、x86_64-unknown-linux-gnu、x86_64-pc-windows-msvc
  */
-import { createRequire } from "module";
 import { execFileSync, execSync } from "child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
-
-const require = createRequire(import.meta.url);
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, "..");
@@ -138,32 +135,41 @@ if (!existsSync(updaterBundle)) {
 }
 
 console.log("使用 tauri signer sign 签名...");
-const signingPassword = process.env.TAURI_SIGNING_PRIVATE_KEY_PASSWORD ?? "";
-const signEnv = {
-  ...process.env,
-  TAURI_SIGNING_PRIVATE_KEY_PASSWORD: signingPassword,
-};
-// 1) 先试环境变量传 key（base64），不碰 -f/-p，避免 TTY
-signEnv.TAURI_SIGNING_PRIVATE_KEY = keyBase64Trimmed;
-const tauriBin = join(root, "node_modules", ".bin", process.platform === "win32" ? "tauri.CMD" : "tauri");
-const signArgs = ["signer", "sign", updaterBundle];
-if (signingPassword.length > 0) signArgs.splice(1, 0, "-p", signingPassword);
-let signed = false;
+// 推荐方案：使用“有密码”的私钥，在 CI 中通过环境变量传入密码。
+// - 本地生成密钥时使用 tauri signer generate（不加 --ci），设置一个非空密码
+// - GitHub Secrets:
+//   - TAURI_SIGNING_PRIVATE_KEY_BASE64: .tauri/xy-todo-list.key 的完整 Base64 内容
+//   - TAURI_SIGNING_PRIVATE_KEY_PASSWORD: 上面生成密钥时设置的密码
+const signingPassword = process.env.TAURI_SIGNING_PRIVATE_KEY_PASSWORD;
+if (!signingPassword) {
+  console.error(
+    "错误：未配置 TAURI_SIGNING_PRIVATE_KEY_PASSWORD。请使用带密码的密钥，并在 GitHub Secrets 中设置该密码。"
+  );
+  process.exit(1);
+}
+
+// 将 Base64 写入临时文件，用 -f 传路径；密码仅通过环境变量传递，避免 -p 空字符串在 CI 中被吃掉
+const tmpKeyPath = join(root, ".tauri", "ci-signing.key");
+mkdirSync(dirname(tmpKeyPath), { recursive: true });
+writeFileSync(tmpKeyPath, keyBase64Trimmed);
+const tauriBin = join(
+  root,
+  "node_modules",
+  ".bin",
+  process.platform === "win32" ? "tauri.CMD" : "tauri"
+);
 try {
-  execFileSync(tauriBin, signArgs, { cwd: root, stdio: "inherit", env: signEnv });
-  signed = true;
-} catch (_) {}
-// 2) 失败则回退：临时文件 + 用 node 直接调 tauri.js 并传 -p ""，避免经 shell 丢空参数
-if (!signed) {
-  delete signEnv.TAURI_SIGNING_PRIVATE_KEY;
-  mkdirSync(join(root, ".tauri"), { recursive: true });
-  const tmpKeyPath = join(root, ".tauri", "ci-signing.key");
-  writeFileSync(tmpKeyPath, keyBase64Trimmed);
-  try {
-    const tauriJs = require.resolve("@tauri-apps/cli/tauri.js");
-    const fallbackArgs = ["signer", "sign", "-f", tmpKeyPath, "-p", signingPassword, updaterBundle];
-    execFileSync(process.execPath, [tauriJs, ...fallbackArgs], { cwd: root, stdio: "inherit", env: signEnv });
-  } finally {
+  execFileSync(
+    tauriBin,
+    ["signer", "sign", "-f", tmpKeyPath, updaterBundle],
+    {
+      cwd: root,
+      stdio: "inherit",
+      env: { ...process.env, TAURI_SIGNING_PRIVATE_KEY_PASSWORD: signingPassword },
+    }
+  );
+} finally {
+  if (existsSync(tmpKeyPath)) {
     unlinkSync(tmpKeyPath);
   }
 }
