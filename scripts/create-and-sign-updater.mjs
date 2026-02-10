@@ -48,7 +48,15 @@ if (!decodedStr.includes("untrusted comment") || !decodedStr.includes("rsign")) 
   process.exit(1);
 }
 
-const bundleBase = join(targetDir, rustTarget, "release", "bundle");
+// 本机构建（Linux/Windows 无 --target）产出在 target/release/bundle；交叉构建（如 macOS --target）在 target/<rust_target>/release/bundle
+let bundleBase = join(targetDir, rustTarget, "release", "bundle");
+if (!existsSync(bundleBase)) {
+  bundleBase = join(targetDir, "release", "bundle");
+}
+if (!existsSync(bundleBase)) {
+  console.error("bundle 根目录不存在，已尝试:", join(targetDir, rustTarget, "release", "bundle"), "与", join(targetDir, "release", "bundle"));
+  process.exit(1);
+}
 let updaterBundle = null;
 let updaterBasename = null;
 let platformKey = platform;
