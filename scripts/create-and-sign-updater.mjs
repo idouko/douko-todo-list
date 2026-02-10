@@ -135,14 +135,28 @@ if (!existsSync(updaterBundle)) {
 }
 
 console.log("使用 tauri signer sign 签名...");
-// 无密码：stdin 传空，满足 signer 读密码时的输入，避免 CI 无 TTY 导致 os error 6
-const signEnv = { ...process.env, TAURI_SIGNING_PRIVATE_KEY_PASSWORD: "" };
-execSync(`pnpm tauri signer sign -k "${keyBase64Trimmed}" "${updaterBundle}"`, {
-  cwd: root,
-  stdio: ["pipe", "inherit", "inherit"],
-  input: "\n",
-  env: signEnv,
-});
+const signEnv = {
+  ...process.env,
+  TAURI_SIGNING_PRIVATE_KEY_PASSWORD: "",
+  CI_SIGN_KEY_B64: keyBase64Trimmed,
+  CI_SIGN_FILE: updaterBundle,
+};
+// CI 无 TTY 会触发 os error 6。macOS/Linux 用 script 提供伪终端
+const isWin = process.platform === "win32";
+if (!isWin) {
+  const scriptSh = "pnpm tauri signer sign -k \"$CI_SIGN_KEY_B64\" \"$CI_SIGN_FILE\"";
+  execSync(`printf '\\n' | script -q /dev/null bash -c ${JSON.stringify(scriptSh)}`, {
+    cwd: root,
+    stdio: "inherit",
+    env: signEnv,
+  });
+} else {
+  execSync(`pnpm tauri signer sign -k "${keyBase64Trimmed}" "${updaterBundle}"`, {
+    cwd: root,
+    stdio: "inherit",
+    env: signEnv,
+  });
+}
 
 const sigPath = `${updaterBundle}.sig`;
 if (!existsSync(sigPath)) {
