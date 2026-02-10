@@ -5,10 +5,13 @@
  * platform: darwin-aarch64 | darwin-x86_64 | linux-x86_64 | windows-x86_64
  * target: 如 aarch64-apple-darwin、x86_64-unknown-linux-gnu、x86_64-pc-windows-msvc
  */
+import { createRequire } from "module";
 import { execFileSync, execSync } from "child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
+
+const require = createRequire(import.meta.url);
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, "..");
@@ -135,26 +138,31 @@ if (!existsSync(updaterBundle)) {
 }
 
 console.log("使用 tauri signer sign 签名...");
-// 用环境变量传私钥内容 + 空密码，避免 -f 临时文件或 -p 触发 TTY（CI 下 "Device not configured"）
 const signingPassword = process.env.TAURI_SIGNING_PRIVATE_KEY_PASSWORD ?? "";
 const signEnv = {
   ...process.env,
-  TAURI_SIGNING_PRIVATE_KEY: decodedStr,
   TAURI_SIGNING_PRIVATE_KEY_PASSWORD: signingPassword,
 };
+// 1) 先试环境变量传 key（base64），不碰 -f/-p，避免 TTY
+signEnv.TAURI_SIGNING_PRIVATE_KEY = keyBase64Trimmed;
 const tauriBin = join(root, "node_modules", ".bin", process.platform === "win32" ? "tauri.CMD" : "tauri");
 const signArgs = ["signer", "sign", updaterBundle];
 if (signingPassword.length > 0) signArgs.splice(1, 0, "-p", signingPassword);
+let signed = false;
 try {
   execFileSync(tauriBin, signArgs, { cwd: root, stdio: "inherit", env: signEnv });
-} catch (_) {
-  // 若 env 传 key 不被支持或失败，回退：写临时文件 + -f，并显式 -p 避免 TTY
+  signed = true;
+} catch (_) {}
+// 2) 失败则回退：临时文件 + 用 node 直接调 tauri.js 并传 -p ""，避免经 shell 丢空参数
+if (!signed) {
+  delete signEnv.TAURI_SIGNING_PRIVATE_KEY;
   mkdirSync(join(root, ".tauri"), { recursive: true });
   const tmpKeyPath = join(root, ".tauri", "ci-signing.key");
   writeFileSync(tmpKeyPath, keyBase64Trimmed);
   try {
+    const tauriJs = require.resolve("@tauri-apps/cli/tauri.js");
     const fallbackArgs = ["signer", "sign", "-f", tmpKeyPath, "-p", signingPassword, updaterBundle];
-    execFileSync(tauriBin, fallbackArgs, { cwd: root, stdio: "inherit", env: signEnv });
+    execFileSync(process.execPath, [tauriJs, ...fallbackArgs], { cwd: root, stdio: "inherit", env: signEnv });
   } finally {
     unlinkSync(tmpKeyPath);
   }
