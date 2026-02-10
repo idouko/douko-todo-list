@@ -1,5 +1,5 @@
 {
-  "productName": "XY Todo List",
+  "productName": "Douko Todo",
   "version": "../package.json",
   "identifier": "com.xycoder.todo-list",
   "mainBinaryName": "xy-todo-list",
@@ -32,7 +32,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "XY Todo List",
+        "title": "Douko Todo",
         "width": 375,
         "height": 600,
         "minWidth": 375,
