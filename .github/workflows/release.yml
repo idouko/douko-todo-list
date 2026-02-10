@@ -22,18 +22,22 @@ jobs:
             args: --target aarch64-apple-darwin
             platform_key: darwin-aarch64
             rust_target: aarch64-apple-darwin
+            bundle_path: src-tauri/target/aarch64-apple-darwin/release/bundle
           - platform: macos-latest
             args: --target x86_64-apple-darwin
             platform_key: darwin-x86_64
             rust_target: x86_64-apple-darwin
+            bundle_path: src-tauri/target/x86_64-apple-darwin/release/bundle
           - platform: ubuntu-22.04
             args: "--bundles appimage"
             platform_key: linux-x86_64
             rust_target: x86_64-unknown-linux-gnu
+            bundle_path: src-tauri/target/release/bundle
           - platform: windows-latest
             args: ""
             platform_key: windows-x86_64
             rust_target: x86_64-pc-windows-msvc
+            bundle_path: src-tauri/target/release/bundle
     runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4
@@ -97,7 +101,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: build-${{ matrix.platform_key }}
-          path: src-tauri/target/${{ matrix.rust_target }}/release/bundle/
+          path: ${{ matrix.bundle_path }}/
 
   release:
     needs: build
