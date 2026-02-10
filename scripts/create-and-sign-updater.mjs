@@ -135,11 +135,12 @@ if (!existsSync(updaterBundle)) {
 }
 
 console.log("使用 tauri signer sign 签名...");
-// 无密码：仅用环境变量 TAURI_SIGNING_PRIVATE_KEY_PASSWORD=""，不传 -p（避免 -p "" 被解析成 -p 接文件路径）
+// 无密码：stdin 传空，满足 signer 读密码时的输入，避免 CI 无 TTY 导致 os error 6
 const signEnv = { ...process.env, TAURI_SIGNING_PRIVATE_KEY_PASSWORD: "" };
 execSync(`pnpm tauri signer sign -k "${keyBase64Trimmed}" "${updaterBundle}"`, {
   cwd: root,
-  stdio: "inherit",
+  stdio: ["pipe", "inherit", "inherit"],
+  input: "\n",
   env: signEnv,
 });
 
