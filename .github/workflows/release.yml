@@ -85,10 +85,11 @@ jobs:
       - name: build
         run: pnpm tauri build ${{ matrix.args }}
 
-      # 构建后手动创建 updater 产物并用 tauri signer sign 签名（-k 直接传 base64，绕过密钥解密问题）
+      # 构建后手动创建 updater 产物并用 tauri signer sign 签名
       - name: create and sign updater artifacts
         env:
           TAURI_SIGNING_PRIVATE_KEY_BASE64: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_BASE64 }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
         run: |
           node scripts/create-and-sign-updater.mjs ${{ matrix.platform_key }} ${{ matrix.rust_target }}
 
