@@ -75,18 +75,33 @@ if (platform.startsWith("darwin")) {
     stdio: "inherit",
   });
 } else if (platform.startsWith("linux")) {
-  const appimageDir = join(bundleBase, "appimage");
-  if (!existsSync(appimageDir)) {
-    console.error("AppImage 目录不存在:", appimageDir);
+  if (!existsSync(bundleBase)) {
+    console.error("bundle 根目录不存在:", bundleBase);
+    process.exit(1);
+  }
+  const subdirs = readdirSync(bundleBase, { withFileTypes: true })
+    .filter((d) => d.isDirectory())
+    .map((d) => d.name);
+  let appimageDir = null;
+  for (const name of ["appimage", "AppImage"]) {
+    const p = join(bundleBase, name);
+    if (existsSync(p)) {
+      appimageDir = p;
+      break;
+    }
+  }
+  if (!appimageDir) {
+    const found = subdirs.length ? `当前子目录: ${subdirs.join(", ")}` : "目录为空";
+    console.error("未找到 AppImage 目录（已尝试 appimage / AppImage）。", found);
+    console.error("请确认 tauri build 已生成 AppImage，或在 workflow 中为 Linux 指定 --bundles appimage");
     process.exit(1);
   }
   const appimages = readdirSync(appimageDir).filter((f) => f.endsWith(".AppImage"));
   if (appimages.length === 0) {
-    console.error("未找到 .AppImage");
+    console.error("未找到 .AppImage 文件，目录:", appimageDir);
     process.exit(1);
   }
   const appimageName = appimages[0];
-  const appimagePath = join(appimageDir, appimageName);
   updaterBasename = `${appimageName}.tar.gz`;
   updaterBundle = join(appimageDir, updaterBasename);
   console.log("创建 .AppImage.tar.gz...");
@@ -96,24 +111,59 @@ if (platform.startsWith("darwin")) {
   });
 } else if (platform.startsWith("windows")) {
   // Windows: nsis 或 msi，updater 用 .zip（Tauri 格式：xxx-setup.nsis.zip 或 xxx.msi.zip）
+  if (!existsSync(bundleBase)) {
+    console.error("Windows bundle 根目录不存在:", bundleBase);
+    process.exit(1);
+  }
+  const subdirs = readdirSync(bundleBase, { withFileTypes: true })
+    .filter((d) => d.isDirectory())
+    .map((d) => d.name);
+
   const nsisDir = join(bundleBase, "nsis");
   const msiDir = join(bundleBase, "msi");
-  let dir = nsisDir;
+  let dir = null;
   let pattern = /\.exe$/;
   let zipExt = "nsis.zip";
-  if (!existsSync(nsisDir) && existsSync(msiDir)) {
+
+  if (existsSync(nsisDir)) {
+    dir = nsisDir;
+    pattern = /\.exe$/;
+    zipExt = "nsis.zip";
+  } else if (existsSync(msiDir)) {
     dir = msiDir;
     pattern = /\.msi$/;
     zipExt = "msi.zip";
+  } else {
+    // 兼容未来可能的目录名变更：在任意子目录中查找 .exe/.msi 安装包
+    for (const name of subdirs) {
+      const p = join(bundleBase, name);
+      const filesIn = readdirSync(p);
+      const hasExe = filesIn.some((f) => f.endsWith(".exe"));
+      const hasMsi = filesIn.some((f) => f.endsWith(".msi"));
+      if (hasExe || hasMsi) {
+        dir = p;
+        if (hasExe) {
+          pattern = /\.exe$/;
+          zipExt = "nsis.zip";
+        } else {
+          pattern = /\.msi$/;
+          zipExt = "msi.zip";
+        }
+        break;
+      }
+    }
   }
-  if (!existsSync(dir)) {
-    console.error("Windows bundle 目录不存在:", dir);
+
+  if (!dir) {
+    const found = subdirs.length ? `当前子目录: ${subdirs.join(", ")}` : "目录为空";
+    console.error("Windows bundle 目录不存在，且未在子目录中找到 .exe / .msi 安装包。", found);
     process.exit(1);
   }
+
   const files = readdirSync(dir);
   const installer = files.find((f) => pattern.test(f));
   if (!installer) {
-    console.error("未找到 Windows 安装包");
+    console.error("未找到 Windows 安装包 (.exe / .msi)，目录:", dir);
     process.exit(1);
   }
   const base = installer.replace(pattern, "");
