@@ -135,15 +135,13 @@ if (!existsSync(updaterBundle)) {
 }
 
 console.log("使用 tauri signer sign 签名...");
+// 无密码：仅用环境变量 TAURI_SIGNING_PRIVATE_KEY_PASSWORD=""，不传 -p（避免 -p "" 被解析成 -p 接文件路径）
 const signEnv = { ...process.env, TAURI_SIGNING_PRIVATE_KEY_PASSWORD: "" };
-// 无密码密钥：传 -p ""，并用 stdin 传空行，避免交互
-const signCmd = `pnpm tauri signer sign -k "${keyBase64Trimmed}" -p "" "${updaterBundle}"`;
-try {
-  execSync(signCmd, { cwd: root, stdio: "inherit", env: signEnv });
-} catch (e) {
-  console.error("若仍报 Wrong password，请本地执行 pnpm run key:regenerate 后，用新 Base64 更新 GitHub Secret 再试。");
-  throw e;
-}
+execSync(`pnpm tauri signer sign -k "${keyBase64Trimmed}" "${updaterBundle}"`, {
+  cwd: root,
+  stdio: "inherit",
+  env: signEnv,
+});
 
 const sigPath = `${updaterBundle}.sig`;
 if (!existsSync(sigPath)) {
