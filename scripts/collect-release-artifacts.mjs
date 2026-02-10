@@ -3,7 +3,7 @@
  * 仅收集安装包、签名和 updater 元数据到 release-artifacts/，供 workflow 上传
  * 用法：node scripts/collect-release-artifacts.mjs <platform_key> <rust_target>
  */
-import { cpSync, existsSync, mkdirSync, readdirSync } from "fs";
+import { cpSync, existsSync, mkdirSync, readdirSync, statSync } from "fs";
 import { join, dirname, basename } from "path";
 import { fileURLToPath } from "url";
 
@@ -41,7 +41,7 @@ if (platformKey.startsWith("darwin")) {
   }
   for (const f of readdirSync(macosDir)) {
     const path = join(macosDir, f);
-    if (require("fs").statSync(path).isDirectory() && f.endsWith(".app")) {
+    if (statSync(path).isDirectory() && f.endsWith(".app")) {
       cpSync(path, join(outDir, f), { recursive: true });
     } else if (f.endsWith(".app.tar.gz") || f.endsWith(".sig")) {
       copy(path);
