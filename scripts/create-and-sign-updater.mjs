@@ -5,10 +5,13 @@
  * platform: darwin-aarch64 | darwin-x86_64 | linux-x86_64 | windows-x86_64
  * target: 如 aarch64-apple-darwin、x86_64-unknown-linux-gnu、x86_64-pc-windows-msvc
  */
+import { createRequire } from "module";
 import { execFileSync, execSync } from "child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
+
+const require = createRequire(import.meta.url);
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, "..");
@@ -210,19 +213,22 @@ if (!signingPassword) {
 const tmpKeyPath = join(root, ".tauri", "ci-signing.key");
 mkdirSync(dirname(tmpKeyPath), { recursive: true });
 writeFileSync(tmpKeyPath, keyBase64Trimmed);
-const tauriBin = join(
-  root,
-  "node_modules",
-  ".bin",
-  process.platform === "win32" ? "tauri.CMD" : "tauri"
-);
 const signArgs = ["signer", "sign", "-f", tmpKeyPath, "-p", signingPassword, updaterBundle];
+const signEnv = { ...process.env, TAURI_SIGNING_PRIVATE_KEY_PASSWORD: signingPassword };
+// Windows 上 execFileSync(tauri.CMD, ...) 会 EINVAL，改用 node 直接运行 tauri.js
+const isWin = process.platform === "win32";
 try {
-  execFileSync(tauriBin, signArgs, {
-    cwd: root,
-    stdio: "inherit",
-    env: { ...process.env, TAURI_SIGNING_PRIVATE_KEY_PASSWORD: signingPassword },
-  });
+  if (isWin) {
+    const tauriJs = require.resolve("@tauri-apps/cli/tauri.js");
+    execFileSync(process.execPath, [tauriJs, ...signArgs], {
+      cwd: root,
+      stdio: "inherit",
+      env: signEnv,
+    });
+  } else {
+    const tauriBin = join(root, "node_modules", ".bin", "tauri");
+    execFileSync(tauriBin, signArgs, { cwd: root, stdio: "inherit", env: signEnv });
+  }
 } finally {
   if (existsSync(tmpKeyPath)) {
     unlinkSync(tmpKeyPath);
