@@ -35,8 +35,17 @@ function copy(src, destName) {
 
 if (platformKey.startsWith("darwin")) {
   const macosDir = join(bundleBase, "macos");
+  if (!existsSync(macosDir)) {
+    console.error("macOS 目录不存在:", macosDir);
+    process.exit(1);
+  }
   for (const f of readdirSync(macosDir)) {
-    if (f.endsWith(".app.tar.gz") || f.endsWith(".sig")) copy(join(macosDir, f));
+    const path = join(macosDir, f);
+    if (require("fs").statSync(path).isDirectory() && f.endsWith(".app")) {
+      cpSync(path, join(outDir, f), { recursive: true });
+    } else if (f.endsWith(".app.tar.gz") || f.endsWith(".sig")) {
+      copy(path);
+    }
   }
   copy(join(bundleBase, `latest-${platformKey}.json`));
 } else if (platformKey.startsWith("linux")) {
@@ -52,7 +61,9 @@ if (platformKey.startsWith("darwin")) {
     const dir = join(bundleBase, sub);
     if (!existsSync(dir)) continue;
     for (const f of readdirSync(dir)) {
-      if (f.endsWith(".nsis.zip") || f.endsWith(".msi.zip") || f.endsWith(".sig")) copy(join(dir, f));
+      const path = join(dir, f);
+      if (f.endsWith(".nsis.zip") || f.endsWith(".msi.zip") || f.endsWith(".sig")) copy(path);
+      else if (f.endsWith(".exe") || f.endsWith(".msi")) copy(path);
     }
   }
   copy(join(bundleBase, `latest-${platformKey}.json`));

@@ -11,7 +11,7 @@ name = "xy_todo_list_lib"
 path = "src/lib.rs"
 
 [[bin]]
-name = "xy-todo-list"
+name = "douko-todo"
 path = "src/main.rs"
 
 [build-dependencies]

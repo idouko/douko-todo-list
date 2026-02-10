@@ -2,7 +2,7 @@
   "productName": "Douko Todo",
   "version": "../package.json",
   "identifier": "com.xycoder.todo-list",
-  "mainBinaryName": "xy-todo-list",
+  "mainBinaryName": "douko-todo",
   "build": {
     "beforeDevCommand": {
       "script": "node scripts/dev-with-wait.mjs",
