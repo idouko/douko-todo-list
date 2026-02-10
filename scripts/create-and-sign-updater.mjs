@@ -135,17 +135,17 @@ if (!existsSync(updaterBundle)) {
 }
 
 console.log("使用 tauri signer sign 签名...");
-const signEnv = { ...process.env, TAURI_SIGNING_PRIVATE_KEY_PASSWORD: "" };
-// 写入 base64 到临时文件，用 -f 传路径，避免 -k 在 shell 中导致末尾 = 被转义（\=\=）
+// 密码：未设置则用空字符串（--ci 无密码密钥）；数组传参避免 shell 吃掉 -p ''
+const signingPassword = process.env.TAURI_SIGNING_PRIVATE_KEY_PASSWORD ?? "";
+const signEnv = { ...process.env, TAURI_SIGNING_PRIVATE_KEY_PASSWORD: signingPassword };
 const tmpKeyPath = join(root, ".tauri", "ci-signing.key");
 mkdirSync(dirname(tmpKeyPath), { recursive: true });
 writeFileSync(tmpKeyPath, keyBase64Trimmed);
 try {
-  execSync(`pnpm tauri signer sign -f "${tmpKeyPath}" -p '' "${updaterBundle}"`, {
-    cwd: root,
-    stdio: "inherit",
-    env: signEnv,
-  });
+  execSync(
+    ["pnpm", "tauri", "signer", "sign", "-f", tmpKeyPath, "-p", signingPassword, updaterBundle],
+    { cwd: root, stdio: "inherit", env: signEnv }
+  );
 } finally {
   unlinkSync(tmpKeyPath);
 }
