@@ -6,7 +6,7 @@
  * target: 如 aarch64-apple-darwin、x86_64-unknown-linux-gnu、x86_64-pc-windows-msvc
  */
 import { execSync } from "child_process";
-import { existsSync, readdirSync, readFileSync } from "fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 
@@ -135,27 +135,19 @@ if (!existsSync(updaterBundle)) {
 }
 
 console.log("使用 tauri signer sign 签名...");
-const signEnv = {
-  ...process.env,
-  TAURI_SIGNING_PRIVATE_KEY_PASSWORD: "",
-  CI_SIGN_KEY_B64: keyBase64Trimmed,
-  CI_SIGN_FILE: updaterBundle,
-};
-// CI 无 TTY 会触发 os error 6。macOS/Linux 用 script 提供伪终端
-const isWin = process.platform === "win32";
-if (!isWin) {
-  const scriptSh = "pnpm tauri signer sign -k \"$CI_SIGN_KEY_B64\" \"$CI_SIGN_FILE\"";
-  execSync(`printf '\\n' | script -q /dev/null bash -c ${JSON.stringify(scriptSh)}`, {
+const signEnv = { ...process.env, TAURI_SIGNING_PRIVATE_KEY_PASSWORD: "" };
+// 写入 base64 到临时文件，用 -f 传路径，避免 -k 在 shell 中导致末尾 = 被转义（\=\=）
+const tmpKeyPath = join(root, ".tauri", "ci-signing.key");
+mkdirSync(dirname(tmpKeyPath), { recursive: true });
+writeFileSync(tmpKeyPath, keyBase64Trimmed);
+try {
+  execSync(`pnpm tauri signer sign -f "${tmpKeyPath}" -p '' "${updaterBundle}"`, {
     cwd: root,
     stdio: "inherit",
     env: signEnv,
   });
-} else {
-  execSync(`pnpm tauri signer sign -k "${keyBase64Trimmed}" "${updaterBundle}"`, {
-    cwd: root,
-    stdio: "inherit",
-    env: signEnv,
-  });
+} finally {
+  unlinkSync(tmpKeyPath);
 }
 
 const sigPath = `${updaterBundle}.sig`;
