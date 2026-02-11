@@ -6334,7 +6334,7 @@ dependencies = [
 
 [[package]]
 name = "xy-todo-list"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "axum",
  "local-ip-address",

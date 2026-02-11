@@ -389,21 +389,13 @@ function applyTheme() {
     mainContent.style.backgroundSize = "cover";
     mainContent.style.backgroundPosition = "center";
   }
-  // 主窗体：同步设置窗体级背景色；下一帧再设一次后触发“微移再还原”，模拟跨屏拖回以让 DWM 正确合成透明度
+  // 主窗体：同步设置窗体级背景色。refresh_main_window_transparency 仅启动时调用一次，避免每次 applyTheme 触发导致窗口抖动、无法拖动
   if (isTauri.value) {
     import("@tauri-apps/api/window")
       .then(({ getCurrentWindow }) => getCurrentWindow())
       .then((win) => {
         if (win.label === "main") {
           win.setBackgroundColor(bgColor).catch(() => {});
-          requestAnimationFrame(() => {
-            win.setBackgroundColor(bgColor).catch(() => {});
-            requestAnimationFrame(() => {
-              import("@tauri-apps/api/core")
-                .then(({ invoke }) => invoke("refresh_main_window_transparency"))
-                .catch(() => {});
-            });
-          });
         }
       })
       .catch(() => {});
@@ -989,6 +981,17 @@ onMounted(async () => {
   isTauri.value = detectTauri();
   // 立即应用一次主题（含透明背景），避免启动首帧显示不透明
   applyTheme();
+  // 启动后延迟执行一次透明度刷新（仅一次），解决 Windows DWM 启动时透明度不生效；不放在 applyTheme 中以免每次主题变化导致窗口抖动
+  if (isTauri.value) {
+    const win = await import("@tauri-apps/api/window").then(({ getCurrentWindow }) => getCurrentWindow());
+    if (win.label === "main") {
+      setTimeout(() => {
+        import("@tauri-apps/api/core")
+          .then(({ invoke }) => invoke("refresh_main_window_transparency"))
+          .catch(() => {});
+      }, 500);
+    }
+  }
   if (isTauri.value) {
     try {
       const { getCurrentWindow } = await import("@tauri-apps/api/window");
