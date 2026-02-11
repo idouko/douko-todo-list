@@ -13,6 +13,6 @@
     "process:allow-restart",
     "allow-save-background-image",
     "allow-clear-background-image",
-    "allow-storage-info"
+    "allow-storage-info","allow-get-app-version"
   ]
 }

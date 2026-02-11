@@ -1,0 +1,5 @@
+# 设置「关于」：获取应用版本
+[[permission]]
+identifier = "allow-get-app-version"
+description = "Enables get_app_version for settings about panel."
+commands.allow = ["get_app_version"]

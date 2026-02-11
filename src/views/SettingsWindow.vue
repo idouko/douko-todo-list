@@ -215,7 +215,7 @@ const backgroundImageSrc = computed(() => {
   return "";
 });
 
-const appVersion = ref("1.0.0");
+const appVersion = ref(typeof __APP_VERSION__ !== "undefined" ? __APP_VERSION__ : "0.0.0");
 const hasUpdate = ref(false);
 const checkedUpdate = ref(false);
 const updateDownloading = ref(false);
@@ -307,7 +307,7 @@ onMounted(async () => {
       const { invoke } = await import("@tauri-apps/api/core");
       appVersion.value = (await invoke("get_app_version")) as string;
     } catch {
-      appVersion.value = "1.0.0";
+      appVersion.value = typeof __APP_VERSION__ !== "undefined" ? __APP_VERSION__ : "0.0.0";
     }
     try {
       const { load } = await import("@tauri-apps/plugin-store");
