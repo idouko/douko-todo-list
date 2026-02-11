@@ -19,8 +19,11 @@ const MAIN_WINDOW_INITIAL_WIDTH: f64 = 375.0;
 const MAIN_WINDOW_INITIAL_HEIGHT_RATIO: f64 = 0.75;
 const WINDOW_STATE_FILENAME: &str = "window-state.json";
 
-#[derive(Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 struct MainWindowState {
+    /// 保存时的应用版本；升级后不匹配则忽略旧数据，避免旧配置导致窗口异常
+    #[serde(default)]
+    version: Option<String>,
     width: f64,
     height: f64,
 }
@@ -35,7 +38,12 @@ fn main_window_state_path(app: &AppHandle) -> std::path::PathBuf {
 fn load_main_window_state(app: &AppHandle) -> Option<MainWindowState> {
     let path = main_window_state_path(app);
     let data = std::fs::read_to_string(&path).ok()?;
-    serde_json::from_str(&data).ok()
+    let state: MainWindowState = serde_json::from_str(&data).ok()?;
+    let current = app.package_info().version.to_string();
+    if state.version.as_deref() != Some(current.as_str()) {
+        return None;
+    }
+    Some(state)
 }
 
 fn save_main_window_state(app: &AppHandle, state: &MainWindowState) -> Result<(), String> {
@@ -43,7 +51,9 @@ fn save_main_window_state(app: &AppHandle, state: &MainWindowState) -> Result<()
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
     }
-    let data = serde_json::to_string_pretty(state).map_err(|e| e.to_string())?;
+    let mut s = state.clone();
+    s.version = Some(app.package_info().version.to_string());
+    let data = serde_json::to_string_pretty(&s).map_err(|e| e.to_string())?;
     std::fs::write(&path, data).map_err(|e| e.to_string())
 }
 
@@ -472,6 +482,7 @@ fn apply_main_window_initial_size(app: &AppHandle) {
         initial_height,
     ));
     let _ = save_main_window_state(app, &MainWindowState {
+        version: None,
         width: MAIN_WINDOW_INITIAL_WIDTH,
         height: initial_height,
     });
@@ -483,6 +494,7 @@ fn save_main_window_size_on_resize(app: &AppHandle) {
     let Ok(phys) = main_win.outer_size() else { return };
     let scale = main_win.scale_factor().unwrap_or(1.0);
     let state = MainWindowState {
+        version: None,
         width: phys.width as f64 / scale,
         height: phys.height as f64 / scale,
     };
@@ -605,9 +617,10 @@ fn sync_sidebar_to_main(app: &AppHandle, bring_to_front: bool) {
     };
     let _ = sidebar.set_size(size_physical);
     let _ = sidebar.show();
+    // 不再调用 set_focus：在 Windows 上会反复触发 Focused/重绘，导致窗口持续抖动、无法拖动
+    #[allow(unused_variables)]
     if bring_to_front {
-        let _ = sidebar.set_focus();
-        let _ = main_win.set_focus();
+        let _ = bring_to_front;
     }
 }
 
@@ -819,10 +832,8 @@ pub fn run() {
                     }
                 }
                 tauri::WindowEvent::Focused(true) => {
-                    // 主窗获得焦点（如点击任务栏图标唤起）时，同时把分组窗 Bring to front
-                    if label == "main" {
-                        sync_sidebar_to_main(window.app_handle(), true);
-                    }
+                    // 主窗获焦点时不再 sync：会触发 main set_position 约束 -> Moved -> 循环，导致抖动
+                    // 仅 Moved/Resized 时同步即可
                 }
                 _ => {}
             }

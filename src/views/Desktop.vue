@@ -981,17 +981,6 @@ onMounted(async () => {
   isTauri.value = detectTauri();
   // 立即应用一次主题（含透明背景），避免启动首帧显示不透明
   applyTheme();
-  // 启动后延迟执行一次透明度刷新（仅一次），解决 Windows DWM 启动时透明度不生效；不放在 applyTheme 中以免每次主题变化导致窗口抖动
-  if (isTauri.value) {
-    const win = await import("@tauri-apps/api/window").then(({ getCurrentWindow }) => getCurrentWindow());
-    if (win.label === "main") {
-      setTimeout(() => {
-        import("@tauri-apps/api/core")
-          .then(({ invoke }) => invoke("refresh_main_window_transparency"))
-          .catch(() => {});
-      }, 500);
-    }
-  }
   if (isTauri.value) {
     try {
       const { getCurrentWindow } = await import("@tauri-apps/api/window");
