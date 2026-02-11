@@ -1,4 +1,4 @@
-# XY Todo List
+# Douko Todo List
 
 支持 **Windows、macOS、Linux** 三端的轻量化桌面 Todo List 应用，基于设计文档 [Todo List 桌面应用设计文档（Tauri + Vue 3 + Axum）.md](./Todo%20List%20桌面应用设计文档（Tauri%20+%20Vue%203%20+%20Axum）.md) 实现。
 
@@ -123,14 +123,14 @@ git push -u origin main
 在项目根目录执行（将私钥保存到安全位置，**切勿提交到仓库**）：
 
 ```bash
-pnpm tauri signer generate -w ~/.tauri/xy-todo-list.key
+pnpm tauri signer generate -w ~/.tauri/douko-todo-list.key
 ```
 
-会生成 `xy-todo-list.key`（私钥）和 `xy-todo-list.key.pub`（公钥）。
+会生成 `douko-todo-list.key`（私钥）和 `douko-todo-list.key.pub`（公钥）。
 
 **② 修改 `src-tauri/tauri.conf.json`**
 
-- 将 `plugins.updater.pubkey` 的值改为 **公钥文件内容**（打开 `xy-todo-list.key.pub`，整段复制粘贴，不能是文件路径）。
+- 将 `plugins.updater.pubkey` 的值改为 **公钥文件内容**（打开 `douko-todo-list.key.pub`，整段复制粘贴，不能是文件路径）。
 - 将 `plugins.updater.endpoints` 中的 `https://github.com/OWNER/REPO/...` 里的 `OWNER`、`REPO` 替换为你的 **GitHub 用户名** 和 **仓库名**。
 
 ### 3. GitHub Actions 发布
@@ -138,7 +138,7 @@ pnpm tauri signer generate -w ~/.tauri/xy-todo-list.key
 - **触发方式**：推送到 `release` 分支，或推送版本标签（如 `v1.0.1`）。
 - **密钥**：在仓库 **Settings → Secrets and variables → Actions** 中新增 Secret：
   - 名称：`TAURI_SIGNING_PRIVATE_KEY`
-  - 值：`xy-todo-list.key` 文件的**完整内容**（或私钥字符串）。
+  - 值：`douko-todo-list.key` 文件的**完整内容**（或私钥字符串）。
 - **工作流权限**：在 **Settings → Actions → General** 中，将 **Workflow permissions** 设为 **Read and write permissions**，否则无法创建 Release。
 
 推送 `release` 分支或打 tag 后，Actions 会自动构建三端安装包并创建/更新 GitHub Release，同时生成 `latest.json` 供客户端检查更新。
